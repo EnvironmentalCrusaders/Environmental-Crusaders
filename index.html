@@ -48,11 +48,19 @@
         
         let isEnteringName = (playerName === "");
         let currentScene = 'LOADING'; 
+        let invincible = false;
         
         function saveGame() {
             localStorage.setItem('crusaders_progress', unlockedStages);
             localStorage.setItem('crusaders_journal', JSON.stringify(journal));
             localStorage.setItem('crusaders_playerName', playerName);
+        }
+
+        function addToJournal(question) {
+            if (!journal.includes(question)) {
+                journal.push(question);
+                saveGame();
+            }
         }
 
         // --- CUTSCENE SYSTEMS ---
@@ -66,7 +74,8 @@
             { speaker: "MC", text: "What is it, Grandma?" },
             { speaker: "Grandmother", text: "This pendant… it has been passed down in our family for generations. Now, it belongs to you." },
             { speaker: "MC", text: "A pendant? Why me?" },
-            { speaker: "Grandmother", text: "Because you are the chosen one. This pendant holds a special power. A disaster is coming, and only the one who carries this pendant can stop it." },
+            { speaker: "Grandmother", text: "Because you are the chosen one. This pendant holds a special power.
+            A disaster is coming, and only the one who carries this pendant can stop it." },
             { speaker: "MC", text: "A disaster…?" },
             { speaker: "Grandmother", text: "Yes. There are other pieces of this pendant scattered around the world. You must find them before it's too late." },
             { speaker: "MC", text: "I understand, Grandma. I'll do my best." },
@@ -127,11 +136,6 @@
         const tntImg = loadImg('tnt', 'tnt.png');
         const explodeImg = loadImg('explode', 'explode.png');
         const payrImg = loadImg('payr', 'payr.png');
-        const continueImg = loadImg('contBtn', 'Continue.png');
-        const returnMapImg = loadImg('retMapBtn', 'Return to Stage Map.png');
-        const codeEmImg = loadImg('codeBtn', 'CodeEm.png');
-        const nootbukImg = loadImg('journBtn', 'nootbuk.png');
-        const balikImg = loadImg('restBtn', 'balik.png');
 
         const trashSpriteNames = ['newspaper.png', 'plasticbag.png', 'apple.png', 'banana.png', 'can.png'];
         const trashSprites = trashSpriteNames.map((src, i) => loadImg('trash' + i, src));
@@ -161,53 +165,17 @@
         let previousScene = 'MAP'; 
         let score, health, seedHP, timeLeft, frameCount, gameOver, gameWon, lastTime = 0;
         let isSettingsOpen = false;
-        let invincible = false;
         let journalScroll = 0; 
-        let touchStartY = 0;
-
-        // --- MENU LAYOUT ---
-        const MENU_BTN_W = 240;
-        const MENU_BTN_H = 100;
-        const MENU_BTN_H_STRETCH = 160; 
-        const MENU_GAP = 40;
-        let menuRects = [];
-
-        function updateMenuLayout() {
-            menuRects = [];
-            const isStage = currentScene.includes('STAGE');
-            const labels = { 'CONT': 'Continue', 'JOURN': 'Journal', 'CODE': 'Insert Code', 'REST': 'Restart Stage', 'MAP': 'Return to Stage Map' };
-            if (isStage) {
-                const totalW1 = (3 * MENU_BTN_W) + (2 * MENU_GAP);
-                const startX1 = (WIDTH - totalW1) / 2;
-                const row1Y = 200;
-                menuRects.push({ x: startX1, y: row1Y, w: MENU_BTN_W, h: MENU_BTN_H, img: continueImg, action: 'CONT', label: labels['CONT'] });
-                menuRects.push({ x: startX1 + (MENU_BTN_W + MENU_GAP), y: row1Y, w: MENU_BTN_W, h: MENU_BTN_H, img: nootbukImg, action: 'JOURN', label: labels['JOURN'] });
-                menuRects.push({ x: startX1 + 2 * (MENU_BTN_W + MENU_GAP), y: row1Y, w: MENU_BTN_W, h: MENU_BTN_H, img: codeEmImg, action: 'CODE', label: labels['CODE'] });
-                const totalW2 = (2 * MENU_BTN_W) + (1 * MENU_GAP);
-                const startX2 = (WIDTH - totalW2) / 2;
-                const row2Y = row1Y + MENU_BTN_H + 80;
-                menuRects.push({ x: startX2, y: row2Y, w: MENU_BTN_W, h: MENU_BTN_H_STRETCH, img: balikImg, action: 'REST', label: labels['REST'] });
-                menuRects.push({ x: startX2 + (MENU_BTN_W + MENU_GAP), y: row2Y, w: MENU_BTN_W, h: MENU_BTN_H_STRETCH, img: returnMapImg, action: 'MAP', label: labels['MAP'] });
-            } else {
-                const totalW = (3 * MENU_BTN_W) + (2 * MENU_GAP);
-                const startX = (WIDTH - totalW) / 2;
-                const midY = HEIGHT / 2 - 80;
-                menuRects.push({ x: startX, y: midY, w: MENU_BTN_W, h: MENU_BTN_H, img: continueImg, action: 'CONT', label: labels['CONT'] });
-                menuRects.push({ x: startX + (MENU_BTN_W + MENU_GAP), y: midY, w: MENU_BTN_W, h: MENU_BTN_H, img: nootbukImg, action: 'JOURN', label: labels['JOURN'] });
-                menuRects.push({ x: startX + 2 * (MENU_BTN_W + MENU_GAP), y: midY, w: MENU_BTN_W, h: MENU_BTN_H, img: codeEmImg, action: 'CODE', label: labels['CODE'] });
-            }
-        }
 
         // --- STAGE VARS ---
         const V_WIDTH = 640;
         const V_HEIGHT = 360;
-        let framesLoaded = 3; 
         let currentFrame = 0, bgTimer = 0, trashList = [], spawnTimer = 0, quizTimer = 0, currentQ = null;
         let activeQuestions = [];
         let lumberjacks = [];
         const spawnAngles = [90, 45, 135, 270, 315, 225];
         let shieldAngle = 0, targetShieldAngle = 0;
-        const joystick = { baseX: 250, baseY: HEIGHT - 150, currX: 250, currY: HEIGHT - 150, radius: 80, knobRadius: 40, active: false };
+        const joystick = { baseX: 250, baseY: HEIGHT - 150, currX: 250, currY: HEIGHT - 150, radius: 80, active: false };
 
         const S3_W = 400;
         const S3_H = 300;
@@ -231,10 +199,6 @@
         };
 
         // --- INITIALIZERS ---
-        function addToJournal(question) {
-            if (!journal.includes(question)) { journal.push(question); saveGame(); }
-        }
-
         function restartCurrentStage() {
             if (currentScene === 'STAGE1') initStage1();
             else if (currentScene === 'STAGE2') initStage2();
@@ -311,18 +275,29 @@
             }
 
             if (isStart && x > setBtnRect.x && x < setBtnRect.x + setBtnRect.w && y > setBtnRect.y && y < setBtnRect.y + setBtnRect.h) {
-                isSettingsOpen = !isSettingsOpen; if (isSettingsOpen) updateMenuLayout(); return;
+                isSettingsOpen = !isSettingsOpen; return;
             }
 
             if (isSettingsOpen && isStart) {
-                for (let btn of menuRects) {
-                    if (x > btn.x && x < btn.x + btn.w && y > btn.y && y < btn.y + btn.h) {
-                        if (btn.action === 'CONT') isSettingsOpen = false;
-                        else if (btn.action === 'JOURN') { previousScene = currentScene; isSettingsOpen = false; currentScene = 'JOURNAL'; }
-                        else if (btn.action === 'REST') { isSettingsOpen = false; restartCurrentStage(); }
-                        else if (btn.action === 'MAP') { isSettingsOpen = false; currentScene = 'MAP'; }
-                        return;
-                    }
+                const centerX = WIDTH / 2;
+                const menuY = 180;
+                // Continue
+                if (x > centerX - 150 && x < centerX + 150 && y > menuY && y < menuY + 50) isSettingsOpen = false;
+                // Journal
+                if (x > centerX - 150 && x < centerX + 150 && y > menuY + 60 && y < menuY + 110) { previousScene = currentScene; isSettingsOpen = false; currentScene = 'JOURNAL'; }
+                // Insert Code
+                if (x > centerX - 150 && x < centerX + 150 && y > menuY + 120 && y < menuY + 170) {
+                    let code = prompt("Enter Secret Code:").toLowerCase();
+                    if (code === "sigma01") { unlockedStages = 2; saveGame(); alert("Stage 1 Cleared!"); }
+                    else if (code === "sigma02") { unlockedStages = 3; saveGame(); alert("Stage 2 Cleared!"); }
+                    else if (code === "sigma03") { unlockedStages = 4; saveGame(); alert("Stage 3 Cleared!"); }
+                    else if (code === "hesoyam") { invincible = true; alert("Invincibility Activated"); }
+                    else if (code === "mayoseh") { invincible = false; alert("Invincibility Deactivated"); }
+                    else if (code === "jaimewashere") { localStorage.clear(); location.reload(); }
+                }
+                if (currentScene.includes('STAGE')) {
+                    if (x > centerX - 150 && x < centerX + 150 && y > menuY + 180 && y < menuY + 230) { isSettingsOpen = false; restartCurrentStage(); }
+                    if (x > centerX - 150 && x < centerX + 150 && y > menuY + 240 && y < menuY + 290) { isSettingsOpen = false; currentScene = 'MAP'; }
                 }
                 return;
             }
@@ -389,7 +364,7 @@
                 else if (currentQ && isStart) {
                     currentQ.a.forEach((_, i) => {
                         const qy = (HEIGHT/2 - 100) + 80 + i*45;
-                        if (x > WIDTH/2-150 && x < WIDTH/2+150 && y > qy && y < qy + 35) { if (i === currentQ.correct) health = 100; currentQ = null; }
+                        if (x > WIDTH/2-150 && x < WIDTH/2+150 && y > qy && y < qy + 35) { if (i === currentQ.correct) { health = 100; addToJournal(currentQ.q); } currentQ = null; }
                     });
                 } else if (isStart) {
                     if (y < s4Borders[0]) playerLane = 0; else if (y < s4Borders[1]) playerLane = 1; else playerLane = 2;
@@ -400,13 +375,23 @@
                     currentQ.a.forEach((_, i) => {
                         const by = (HEIGHT/2 - 100) + 80 + i*45;
                         if (x > WIDTH/2 - 150 && x < WIDTH/2 + 150 && y > by && y < by + 35) {
-                            if (i === currentQ.correct) { bossHP -= 10; turnQueue = 5; } else turnQueue = 15;
+                            if (i === currentQ.correct) { bossHP -= 10; turnQueue = 5; addToJournal(currentQ.q); } else turnQueue = 15;
                             currentQ = null; waitingForQuiz = false;
                         }
                     });
                 } else if (isStart && !waitingForQuiz) { playerLane = Math.floor(x / (WIDTH / 4)); }
             }
         }
+
+        // --- MOUSE WHEEL FOR JOURNAL ---
+        window.addEventListener('wheel', (e) => {
+            if (currentScene === 'JOURNAL') {
+                journalScroll -= e.deltaY;
+                const maxScroll = -(journal.length * 45 - 350);
+                if (journalScroll > 0) journalScroll = 0;
+                if (journal.length > 9 && journalScroll < maxScroll) journalScroll = maxScroll;
+            }
+        });
 
         // --- MAIN GAME LOOP ---
         function gameLoop(timestamp) {
@@ -462,7 +447,34 @@
                     ctx.strokeStyle = "white"; ctx.lineWidth = 3; ctx.stroke();
                     ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 18px monospace";
                     ctx.fillText(s.label, s.x, s.y + 75);
+                    // ADDED: Stage labels in white
+                    ctx.fillStyle = "white"; ctx.font = "bold 22px monospace";
+                    ctx.fillText("STAGE " + id, s.x, s.y - 65);
                 }
+            } else if (currentScene === 'JOURNAL') {
+                const grad = ctx.createRadialGradient(WIDTH/2, HEIGHT/2, 100, WIDTH/2, HEIGHT/2, 800);
+                grad.addColorStop(0, "#1a3c1a"); grad.addColorStop(1, "#0a0d0a");
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, WIDTH, HEIGHT);
+                ctx.strokeStyle = "#2ed573"; ctx.lineWidth = 2; ctx.strokeRect(50, 30, WIDTH - 100, 80);
+                ctx.fillStyle = "#2ed573"; ctx.font = "bold 45px monospace"; ctx.textAlign = "center";
+                ctx.fillText("ECO-CRUSADER FIELD GUIDE", WIDTH/2, 85);
+                ctx.font = "bold 18px monospace"; ctx.fillStyle = "#ffffff";
+                ctx.fillText(`DATABASE SYNC: ${Math.floor((journal.length / questionsBank.length) * 100)}% | ENTRIES: ${journal.length}`, WIDTH/2, 140);
+                ctx.save(); ctx.beginPath(); ctx.rect(100, 160, WIDTH - 200, 420); ctx.clip();
+                if (journal.length === 0) {
+                    ctx.globalAlpha = 0.5; ctx.textAlign = "center";
+                    ctx.fillText(">> NO DATA RECOVERED <<", WIDTH/2, 350);
+                } else {
+                    ctx.textAlign = "left";
+                    journal.forEach((txt, i) => {
+                        const entryY = 200 + i * 45 + journalScroll;
+                        ctx.fillStyle = "rgba(46, 213, 115, 0.1)"; ctx.fillRect(110, entryY - 25, WIDTH - 240, 35);
+                        ctx.fillStyle = "#fff"; ctx.font = "16px monospace"; ctx.fillText(`[DECODED] ${txt}`, 130, entryY);
+                    });
+                }
+                ctx.restore();
+                ctx.fillStyle = "#ff4757"; ctx.fillRect(WIDTH/2 - 100, 620, 200, 50);
+                ctx.fillStyle = "white"; ctx.font = "bold 20px monospace"; ctx.fillText("CLOSE GUIDE", WIDTH/2, 652);
             } else if (currentScene === 'STAGE1') {
                 if (!gameOver && !gameWon && !isSettingsOpen) {
                     if (!currentQ) {
@@ -472,7 +484,7 @@
                             trashList.push({ type: isCanal ? 'canal' : 'garden', x: isCanal ? -110 : 130+Math.random()*300, y: isCanal ? 80 : 180+Math.random()*80, speed: isCanal ? (7+Math.random()*4+score/1000) : 0, spriteIdx: Math.floor(Math.random()*trashSprites.length) });
                             spawnTimer = 0;
                         }
-                        bgTimer += dt; if (bgTimer >= 0.2) { bgTimer = 0; currentFrame = (currentFrame+1)%framesLoaded; }
+                        bgTimer += dt; if (bgTimer >= 0.2) { bgTimer = 0; currentFrame = (currentFrame+1)%3; }
                         for (let i = trashList.length - 1; i >= 0; i--) {
                             const t = trashList[i]; if (t.type !== 'garden') { t.x += t.speed; if (t.x > V_WIDTH + 50) { if (!invincible) health -= 10; trashList.splice(i, 1); } }
                         }
@@ -490,7 +502,7 @@
                 if (!gameOver && !gameWon && !isSettingsOpen) {
                     if (!currentQ) {
                         quizTimer += dt; if (quizTimer >= 10 && activeQuestions.length > 0) { currentQ = activeQuestions.shift(); quizTimer = 0; }
-                        frameCount++; if (frameCount % 60 === 0 && !invincible) timeLeft--;
+                        frameCount++; if (frameCount % 60 === 0) timeLeft--;
                         let ad = targetShieldAngle - shieldAngle; while (ad < -Math.PI) ad += Math.PI * 2; while (ad > Math.PI) ad -= Math.PI * 2;
                         shieldAngle += ad * 0.25;
                         if (score >= 10000) gameWon = true; if (seedHP <= 0 || timeLeft <= 0) { seedHP = 0; gameOver = true; }
@@ -513,10 +525,8 @@
                     const lx = CENTER.x+Math.cos(lj.angle)*lj.dist, ly = CENTER.y+Math.sin(lj.angle)*lj.dist;
                     if (lumberjackImg.complete) { ctx.save(); ctx.translate(lx, ly); ctx.rotate(lj.angle + Math.PI/2); ctx.drawImage(lumberjackImg, -40, -40, 80, 80); ctx.restore(); }
                 });
-                // INTERFACE STAGE 2
                 ctx.fillStyle="white"; ctx.font="bold 26px monospace"; ctx.textAlign="center";
-                ctx.fillText(`SCORE: ${score}/10000 | SEED HP: ${seedHP} | TIME: ${timeLeft}`, WIDTH/2, 50);
-                // JOYSTICK
+                ctx.fillText(`SCORE: ${score}/10000 | HP: ${seedHP} | TIME: ${timeLeft}`, WIDTH/2, 50);
                 ctx.strokeStyle="white"; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(joystick.baseX, joystick.baseY, joystick.radius, 0, Math.PI*2); ctx.stroke();
                 ctx.fillStyle="rgba(255,255,255,0.3)"; ctx.beginPath(); ctx.arc(joystick.currX, joystick.currY, 40, 0, Math.PI*2); ctx.fill();
                 if (currentQ) drawQuizUI_Shared();
@@ -538,9 +548,6 @@
                         t.x += t.speed; if (t.x < 0 || t.x > S3_W-55) t.speed *= -1;
                         if (hookState === "extend" && Math.hypot(tipX-(t.x+27), tipY-(t.y+27)) < 30) { score += 500; s3Trash.splice(i, 1); hookState = "return"; if (score >= 15000) gameWon = true; }
                     });
-                    if (s3Trash.length === 0) {
-                        for(let i=0; i<8; i++) s3Trash.push({ x: Math.random()*340, y: 10+Math.random()*30, speed: (Math.random()>0.5?2.5:-2.5), spriteIdx: Math.floor(Math.random()*trashSprites.length) });
-                    }
                 }
                 ctx.save(); ctx.scale(3.2, 2.4); if (s3Bgs[currentFrame]) ctx.drawImage(s3Bgs[currentFrame], 0, 0, S3_W, S3_H);
                 ctx.strokeStyle = stunTimer > 0 ? "red" : (fishHiddenTimer > 0 ? "#00ff00" : "white");
@@ -560,7 +567,7 @@
                         if (spawnCooldown <= 0) { dynamites.push({ x: WIDTH, bIdx: Math.random() < 0.5 ? 0 : 1, speed: 12, warning: 0.5 }); spawnCooldown = 1.6; }
                         dynamites.forEach((d, i) => {
                             if (d.warning > 0) d.warning -= dt; else d.x -= d.speed;
-                            if (d.x < 280 && d.x > 140 && (playerLane === d.bIdx || playerLane === d.bIdx + 1)) { health -= 20; explosions.push({ x: d.x, y: s4Borders[d.bIdx], life: 0.6 }); dynamites.splice(i, 1); } 
+                            if (d.x < 280 && d.x > 140 && (playerLane === d.bIdx || playerLane === d.bIdx + 1)) { if (!invincible) health -= 20; explosions.push({ x: d.x, y: s4Borders[d.bIdx], life: 0.6 }); dynamites.splice(i, 1); } 
                             else if (d.x < -20) { explosions.push({ x: 0, y: s4Borders[d.bIdx], life: 0.6 }); dynamites.splice(i, 1); }
                         });
                     }
@@ -588,7 +595,7 @@
                     } else if (!waitingForQuiz && turnQueue === 0 && fireballs.length === 0 && warnings.length === 0) {
                         waitingForQuiz = true; currentQ = activeQuestions.length > 0 ? activeQuestions.shift() : questionsBank[Math.floor(Math.random()*questionsBank.length)];
                     }
-                    fireballs.forEach((f, i) => { f.y += f.speed; if (f.y > HEIGHT - 120) { if (playerLane === f.lane) health -= 20; explosions.push({ x: s5LanesX[f.lane], y: HEIGHT - 100, life: 0.6 }); fireballs.splice(i, 1); } });
+                    fireballs.forEach((f, i) => { f.y += f.speed; if (f.y > HEIGHT - 120) { if (playerLane === f.lane && !invincible) health -= 20; explosions.push({ x: s5LanesX[f.lane], y: HEIGHT - 100, life: 0.6 }); fireballs.splice(i, 1); } });
                     warnings.forEach((w, i) => { w.timer -= dt; if (w.timer <= 0) warnings.splice(i, 1); });
                     explosions.forEach((e, i) => { e.life -= dt; if (e.life <= 0) explosions.splice(i, 1); });
                     if (health <= 0) gameOver = true; if (bossHP <= 0) { bossHP = 0; gameWon = true; }
@@ -596,16 +603,14 @@
                 if (backunawaImg.complete) ctx.drawImage(backunawaImg, 0, 0, WIDTH, HEIGHT);
                 ctx.drawImage(boatkunawaImg, WIDTH/2 - 400, 20 + wavy, 800, 500);
                 fireballs.forEach(f => { if (payrImg.complete) ctx.drawImage(payrImg, s5LanesX[f.lane] - 60, f.y - 60, 120, 120); });
-                explosions.forEach(e => { if (explodeImg.complete) { ctx.save(); ctx.globalAlpha = Math.min(1, e.life*1.5); ctx.drawImage(explodeImg, e.x-150, e.y-150, 300, 300); ctx.restore(); } });
                 ctx.drawImage(boatGuyImg, s5LanesX[playerLane]-90, HEIGHT-200+wavy, 180, 180);
                 ctx.fillStyle = "white"; ctx.font = "bold 28px monospace"; ctx.textAlign = "center";
-                ctx.fillText(`BAKUNAWA HP: ${bossHP}% | PLAYER HEALTH: ${health}`, WIDTH/2, 50);
+                ctx.fillText(`BAKUNAWA HP: ${bossHP}% | HEALTH: ${health}`, WIDTH/2, 50);
                 if (waitingForQuiz && currentQ) drawQuizUI_Shared();
             }
 
-            // SETTINGS BUTTON
-            if (!isEnteringName && currentScene !== 'LOADING' && currentScene !== 'JOURNAL' && !currentScene.includes('CUTSCENE')) {
-                if (butoImg.complete) ctx.drawImage(butoImg, setBtnRect.x, setBtnRect.y, setBtnRect.w, setBtnRect.h);
+            if (butoImg.complete && !isEnteringName && currentScene !== 'LOADING' && currentScene !== 'JOURNAL' && !currentScene.includes('CUTSCENE')) {
+                ctx.drawImage(butoImg, setBtnRect.x, setBtnRect.y, setBtnRect.w, setBtnRect.h);
             }
 
             if (currentScene !== 'MAP' && currentScene !== 'JOURNAL' && !currentScene.includes('CUTSCENE') && (gameOver || gameWon)) {
@@ -617,17 +622,20 @@
             }
 
             if (isSettingsOpen) {
-                ctx.fillStyle = "rgba(0,0,0,0.92)"; ctx.fillRect(0,0,WIDTH,HEIGHT);
-                ctx.fillStyle = "white"; ctx.font = "bold 60px monospace"; ctx.textAlign = "center"; ctx.fillText("PAUSED", WIDTH/2, 100);
-                menuRects.forEach(btn => {
-                    if (btn.img.complete) ctx.drawImage(btn.img, btn.x, btn.y, btn.w, btn.h);
-                    ctx.fillStyle = "#2ed573"; ctx.font = "bold 20px monospace"; ctx.fillText(btn.label, btn.x + btn.w/2, btn.y + btn.h + 30);
+                ctx.fillStyle = "rgba(0,0,0,0.95)"; ctx.fillRect(0,0,WIDTH,HEIGHT);
+                ctx.fillStyle = "white"; ctx.font = "bold 50px monospace"; ctx.textAlign = "center";
+                ctx.fillText("PAUSED", WIDTH/2, 120);
+                const menuItems = ["CONTINUE", "JOURNAL", "INSERT CODE"];
+                if (currentScene.includes('STAGE')) { menuItems.push("RESTART", "RETURN TO MAP"); }
+                menuItems.forEach((label, i) => {
+                    ctx.fillStyle = "#333"; ctx.fillRect(WIDTH/2-150, 180 + i*60, 300, 50);
+                    ctx.fillStyle = label === "INSERT CODE" ? "#2ed573" : "white"; ctx.font = "20px monospace";
+                    ctx.fillText(label, WIDTH/2, 212 + i*60);
                 });
             }
             requestAnimationFrame(gameLoop);
         }
 
-        // --- QUIZ HELPERS ---
         function drawQuizUI_S1() {
             ctx.fillStyle = "rgba(0,0,0,0.85)"; ctx.fillRect(50, 50, V_WIDTH - 100, V_HEIGHT - 100);
             ctx.fillStyle = "white"; ctx.font = "14px monospace"; ctx.textAlign = "center"; ctx.fillText(currentQ.q, V_WIDTH/2, 90);
